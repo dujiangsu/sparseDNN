@@ -1,11 +1,9 @@
-#include <chrono>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string> 
-#include <vector>
-#include <chrono>
 #include <boost/algorithm/string.hpp>
-//#include <boost/algorithm/string.hpp>
+#include "ActivationSolver.hpp"
+#include "tiktoc.hpp"
 
 using namespace std;
 
@@ -14,15 +12,6 @@ using namespace std;
 namespace READ{
 	//由于特性，是固定的每隔32个
 
-	struct weightStruct{
-		int index_i;
-		int index_j;
-		double value;
-	};	
-	struct inputStruct{
-		int index, prev;
-		double value;
-	};	
 	
 	int size ; 
 	int inx[10] ;
@@ -100,12 +89,12 @@ namespace READ{
 
 	double readdouble( int &i, char * buffer ) {
 			double ret = 0 ; 
-			int cnt = -10000 ; 
-			for( ; buffer[i]>'9' || buffer[i]<'0' ; i++ ) ; 
-			for( ; ( buffer[i] <='9' && buffer[i] >= '0' )||(buffer[i]=='.') ; i++ ) 
-				if( buffer[i] =='.' ) cnt = 0 ; 
-					else cnt ++ , ret = ret * 10 + buffer[i]-'0' ; 
-			if( cnt > 0 )ret /= inx[cnt] ;
+			//int cnt = -10000 ; 
+			//for( ; buffer[i]>'9' || buffer[i]<'0' ; i++ ) ; 
+			//for( ; ( buffer[i] <='9' && buffer[i] >= '0' )||(buffer[i]=='.') ; i++ ) 
+			//	if( buffer[i] =='.' ) cnt = 0 ; 
+			//		else cnt ++ , ret = ret * 10 + buffer[i]-'0' ; 
+			//if( cnt > 0 )ret /= inx[cnt] ;
 			while(buffer[i]!='\n')i++;
 			return ret ; 
 					
@@ -128,6 +117,7 @@ namespace READ{
 			int ps = 0;
 			for( int j = 0; j<32*layerNeuron ; j++){
 				(*write).index_i = readint( ps , buffer );
+				//printf("%d\n",(*write).index_i);
 				(*write).index_j = readint( ps , buffer );
 				readdouble( ps , buffer );
 				(*write).value = 0.0625;
@@ -143,10 +133,12 @@ namespace READ{
 		printf("RANKING COMPLETE\n");
 	}	
 	
-	/* int * dispatch( inputStruct * input, int layerNeuron , int picID){
-		int * sample = new int[layerNeuron];
-		
-	} */
+	double * dispatch( inputStruct * input, int layerNeuron , int picID ){
+		double * sample = new double[layerNeuron];
+		std::fill_n(sample, layerNeuron, 0);
+		for(int i = head[picID]; i ; i = input[i].prev) sample[input[i].index] = 1;
+		return sample;		
+	}
 	
 	void readInput(int numofLayers, int layerNeuron, inputStruct * &input){
 		char * buffer;
@@ -210,23 +202,23 @@ int main(int argc, char *argv[])
 	READ::inputStruct * input;
 	READ::weightStruct * weight;
 	
-	double * bias = new double[totalNeurons];
-	std::fill_n(bias, totalNeurons, biasValue);
+	//double * bias = new double[totalNeurons];
+	//std::fill_n(bias, totalNeurons, biasValue);
 	
 	//Reading
-	auto start0 = chrono::system_clock::now();
+	tik();
 	READ::readWeight( numofLayers , layerNeuron , weight );	
-	printf("%d\n",weight[32*1024*100].index_i);
 	READ::readInput( numofLayers , layerNeuron , input );
-	auto end0   = chrono::system_clock::now();
-	auto duration0 = chrono::duration_cast<chrono::microseconds>(end0 - start0);
-	printf("Time Consumed by reading Input and Weight: %f s\n",double(duration0.count()) * chrono::microseconds::period::num / chrono::microseconds::period::den);
+	printf("Reading Data Consumed:");
+	toc();
 	
-	auto start1 = chrono::system_clock::now();	
-	//CAL::reluInference( numofLayers, layerNeuron , weight , input , bias );	
-	auto end1   = chrono::system_clock::now();
-	auto duration1 = chrono::duration_cast<chrono::microseconds>(end1 - start1);
-	printf("Time Consumed by processing: %f s\n",double(duration1.count()) * chrono::microseconds::period::num / chrono::microseconds::period::den);
+	tik();
+	for(int i = 0; i<10;i++){
+		CAL::reluInference( numofLayers, layerNeuron , weight , dispatch( input, layerNeuron , i) , biasValue );
+		printf("SAMPLE %d COMPLETE\n",i);
+	}
+	printf("Calculation Consumed:");
+	toc();
 	
 	//Result Check
 	
