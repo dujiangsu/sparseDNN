@@ -1,32 +1,19 @@
-#include <chrono>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string> 
 #include <vector>
 #include <chrono>
+#include "IOSolver.h"
 #include <boost/algorithm/string.hpp>
-//#include <boost/algorithm/string.hpp>
 
 using namespace std;
-
 
 
 namespace READ{
 	//由于特性，是固定的每隔32个
 
-	struct weightStruct{
-		int index_i;
-		int index_j;
-		double value;
-	};	
-	struct inputStruct{
-		int index, prev;
-		double value;
-	};	
-	
 	int size ; 
 	int inx[10] ;
-	int head[60000];
 	char* readFile(char * filename){
 		//Read in using CSR format			
 		FILE * pFile;
@@ -46,18 +33,15 @@ namespace READ{
 		fclose(pFile); 
 		return buffer;
 	}
-	
-	void weightSwap( weightStruct * addr1 , weightStruct * addr2 ){
-		weightStruct temp;
-		temp.index_i = (*addr1).index_i;
-		temp.index_j = (*addr1).index_j;
-		temp.value = (*addr1).value;
-		(*addr1).index_i = (*addr2).index_i;
-		(*addr1).index_j = (*addr2).index_j;
-		(*addr1).value = (*addr2).value;
-		(*addr2).index_i = temp.index_i;
-		(*addr2).index_j = temp.index_j;
-		(*addr2).value = temp.value;		
+
+	void rankWeight(int numofLayers, int layerNeuron, weightStruct * weight){
+		for(int i = 0; i<numofLayers ; i++){
+			quick_sort( weight, i*layerNeuron*32, (i+1)*layerNeuron*32-1);
+			printf("%d th/ed/rd layer has been sorted\n", i+1);			
+			/* for(int j = 0; j<1000 ; j++){
+				printf("%d-------%d\n",weight[j].index_i,weight[j].index_j);
+			} */			
+		}
 	}
 	
 	void quick_sort(weightStruct * weight, int b, int e)
@@ -77,19 +61,18 @@ namespace READ{
 		}
 	}
 	
-	
-
-	void rankWeight(int numofLayers, int layerNeuron, weightStruct * weight){
-		for(int i = 0; i<numofLayers ; i++){
-			quick_sort( weight, i*layerNeuron*32, (i+1)*layerNeuron*32-1);
-			printf("%d th/ed/rd layer has been sorted\n", i+1);			
-			/* for(int j = 0; j<1000 ; j++){
-				printf("%d-------%d\n",weight[j].index_i,weight[j].index_j);
-			} */			
-		}
+	void weightSwap( weightStruct * addr1 , weightStruct * addr2 ){
+		weightStruct temp;
+		temp.index_i = (*addr1).index_i;
+		temp.index_j = (*addr1).index_j;
+		temp.value = (*addr1).value;
+		(*addr1).index_i = (*addr2).index_i;
+		(*addr1).index_j = (*addr2).index_j;
+		(*addr1).value = (*addr2).value;
+		(*addr2).index_i = temp.index_i;
+		(*addr2).index_j = temp.index_j;
+		(*addr2).value = temp.value;		
 	}
-	
-	
 	
 	int readint( int &i, char * buffer){
 			int ret = 0 ; 
@@ -116,11 +99,12 @@ namespace READ{
 		weight = new weightStruct[32*numofLayers*layerNeuron];
 		weightStruct * write = weight;
 		int filenum;
-		char * buffer;
+		
 		
 		for( int i = 0 ; i<numofLayers ; i++){
 			filenum = i+1; 
-			char filename[50];			
+			char filename[50];
+			char * buffer;
 			sprintf(filename,"%s%d%s%d%s%d%s%d%s","/home/dujiangsu/dataset/",layerNeuron,"/neuron",layerNeuron,"/n",layerNeuron,"-l",filenum,".tsv");
 			printf("%s\n",filename);			
 			buffer = readFile(filename);
@@ -133,9 +117,8 @@ namespace READ{
 				(*write).value = 0.0625;
 				++write;
 			}			
-					
+			free(buffer);		
 		}
-		free(buffer);
 		printf("WEIGHT READ COMPLETE.\n");
 		
 		rankWeight( numofLayers , layerNeuron , weight );
@@ -143,10 +126,9 @@ namespace READ{
 		printf("RANKING COMPLETE\n");
 	}	
 	
-	/* int * dispatch( inputStruct * input, int layerNeuron , int picID){
-		int * sample = new int[layerNeuron];
-		
-	} */
+	void dispatch( inputStruct * input, int layerNeuron , int picID){
+		int 
+	}
 	
 	void readInput(int numofLayers, int layerNeuron, inputStruct * &input){
 		char * buffer;
@@ -156,7 +138,7 @@ namespace READ{
 		
 		int T = 0 ; 
 		for( int i=0 ; i<size ; i++ ) if( buffer[i] == '\n' ) T ++ ;
-		
+		int head[60000];
 		std::fill_n(head, 60000, 0);
 		input = new inputStruct[T];
 		inputStruct * write = input;
@@ -179,59 +161,3 @@ namespace READ{
 	}
 
 }
-
-
-
-double neuralNetBias[4] = {-0.3,-0.35,-0.4,-0.45};
-double biasValue;
-int neuronType[4] = {1024, 4096, 16384, 65536};
-int totalNeurons, totalEdges;
-int numofLayers, layerNeuron;
-	
-
-
-int main(int argc, char *argv[])
-{
-	READ::inx[0] = 1;
-	for( int i=1 ; i<=7 ; i++ ) READ::inx[i] = READ::inx[i-1]  *  10 ;
-	if(argc == 3){
-		numofLayers = atoi(argv[1]);
-		layerNeuron = neuronType[atoi(argv[2])];
-		printf("%d Layers to be run in %d neurons' network.\n",numofLayers,layerNeuron);
-	}
-	else{
-		printf("Wrong arguments numbers\n");
-	}
-	
-	totalNeurons = numofLayers * layerNeuron;
-	totalEdges = 32 * totalNeurons;
-	biasValue = neuralNetBias[atoi(argv[2])];
-	
-	READ::inputStruct * input;
-	READ::weightStruct * weight;
-	
-	double * bias = new double[totalNeurons];
-	std::fill_n(bias, totalNeurons, biasValue);
-	
-	//Reading
-	auto start0 = chrono::system_clock::now();
-	READ::readWeight( numofLayers , layerNeuron , weight );	
-	printf("%d\n",weight[32*1024*100].index_i);
-	READ::readInput( numofLayers , layerNeuron , input );
-	auto end0   = chrono::system_clock::now();
-	auto duration0 = chrono::duration_cast<chrono::microseconds>(end0 - start0);
-	printf("Time Consumed by reading Input and Weight: %f s\n",double(duration0.count()) * chrono::microseconds::period::num / chrono::microseconds::period::den);
-	
-	auto start1 = chrono::system_clock::now();	
-	//CAL::reluInference( numofLayers, layerNeuron , weight , input , bias );	
-	auto end1   = chrono::system_clock::now();
-	auto duration1 = chrono::duration_cast<chrono::microseconds>(end1 - start1);
-	printf("Time Consumed by processing: %f s\n",double(duration1.count()) * chrono::microseconds::period::num / chrono::microseconds::period::den);
-	
-	//Result Check
-	
-}
-
-/* 	printf("%f\n",bias[totalNeurons-1]);
-	printf("%d\n",indices[32*1024*100]);	
-	printf("%d   %d\n", row[0], column[0]);	 */
