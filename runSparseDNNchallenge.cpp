@@ -4,7 +4,7 @@
 #include <boost/algorithm/string.hpp>
 #include "ActivationSolver.hpp"
 #include "tiktoc.hpp"
-
+#include <omp.h>
 using namespace std;
 
 
@@ -136,7 +136,11 @@ namespace READ{
 	double * dispatch( inputStruct * input, int layerNeuron , int picID ){
 		double * sample = new double[layerNeuron];
 		std::fill_n(sample, layerNeuron, 0);
-		for(int i = head[picID]; i ; i = input[i].prev) sample[input[i].index] = 1;
+		for(int i = head[picID]; i ; i = input[i].prev){
+			sample[input[i].index] = 1;
+			//printf("i:%d\n",i);
+			//printf("i:%d\n",input[i].index);
+		}		
 		return sample;		
 	}
 	
@@ -172,7 +176,12 @@ namespace READ{
 
 }
 
+int ans[60000] , si ;
 
+void Add_ans(int va) {
+	ans[++si] = va;
+	printf("-------!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!---%d\n",va );
+}
 
 double neuralNetBias[4] = {-0.3,-0.35,-0.4,-0.45};
 double biasValue;
@@ -212,12 +221,19 @@ int main(int argc, char *argv[])
 	printf("Reading Data Consumed:");
 	toc();
 	
+	
 	tik();
-	for(int i = 0; i<10;i++){
-		CAL::reluInference( numofLayers, layerNeuron , weight , dispatch( input, layerNeuron , i) , biasValue );
-		printf("SAMPLE %d COMPLETE\n",i);
+	
+	#pragma omp parallel num_threads(24)
+	#pragma omp for
+	for(int i = 0; i<60000;i++){
+		if(CAL::reluInference( numofLayers, layerNeuron , weight , dispatch( input, layerNeuron , i) , biasValue )){
+			Add_ans(i);
+		}
+		//printf("SAMPLE %d COMPLETE\n",i);
 	}
 	printf("Calculation Consumed:");
+	
 	toc();
 	
 	//Result Check
